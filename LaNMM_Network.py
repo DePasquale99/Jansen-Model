@@ -28,11 +28,28 @@ I1, I2 = (A_AMPA/a_AMPA)*p1, (A_AMPA/a_AMPA)*p2
 
 
 ############################################### Actual network model
+epsilon = 10 #cross region connectivity
+N = 90 #Number of regions
+
+def read_W(data_address):
+    #ad hoc function for reading data
+    data = np.genfromtxt(data_address,
+                     skip_header=1,
+                     names=True,
+                     dtype=None,
+                     delimiter=' ')
+    
+    print(len(data))
+    W = np.zeros((N,N))
+    for row in data:
+        i, j, w = row
+        W[i,j] = w
+        
+    return W
 
 
-N = 5 #Number of regions
-np.random.seed(314) #start with a random connectivity matrix, representing the connections between P1 and P1
-W = np.random.uniform(size=(N,N))
+#P1 connection matrix copied from Jansen network
+W = read_W('Data/data.dat')
 #initial conditions:
 X0 = np.append(np.ones((N, 5)),np.zeros((N, 5)), axis = 1 )
 dx = np.zeros((N, 10))
@@ -41,7 +58,7 @@ dx = np.zeros((N, 10))
 def Network_LaNMM(x,t):
     #at each time calculate the input from other columns as matrix*input column (in this case P1->P1):
     x = np.reshape(x, (N, 10))
-    ext_p1 = np.dot(W, x[:, 0])
+    ext_p1 = epsilon*np.dot(W, x[:, 0])
 
     for i in range(N):
         #for every region of the brain we calculate the update
@@ -63,17 +80,18 @@ def Network_LaNMM(x,t):
     return dx.flatten()
 
 t0 = time()
-t = np.arange(0, 2, 0.0001)
+t = np.arange(0, 10, 0.0005)
 print(np.shape(X0))
 result = odeint(Network_LaNMM,  X0.flatten(), t)
 result = np.reshape(result, (len(t), N, 10))
 print(np.shape(result))
 
-print('exeution time: ', time()-t0)
 
-plt.scatter(t, result[:,0,0], label = 'P1 cells of the first pop')
-
-plt.scatter(t, result[:,1,0], label = 'P1 cells of the second pop')
-
-plt.legend()
+t0 = time()-t0
+print('exeution time: ', t0)
+for i in range(N):
+    plt.scatter(t, result[:,i,0], label = 'P1 cells of the second pop')
+#plt.legend()
 plt.show()
+
+print('print time: ', time()-t0)
