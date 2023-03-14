@@ -89,7 +89,7 @@ print(np.shape(result))
 
 t0 = time()-t0
 print('exeution time: ', t0)
-for i in range(N):
+for i in range(0, N, 10):
     plt.scatter(t, result[:,i,0], label = 'P1 cells of the second pop')
 #plt.legend()
 plt.show()
