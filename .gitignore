@@ -1,4 +1,9 @@
-Data
-!Data\data.dat
-Assets
-*.png
+
+#all of the files in the folder
+Data\*                  
+#exception for the file
+!Data\data.dat          
+#all of the folder
+Assets                  
+#all of the png files
+*.png                   
