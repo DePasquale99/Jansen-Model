@@ -39,7 +39,6 @@ def read_W(data_address):
                      dtype=None,
                      delimiter=' ')
     
-    print(len(data))
     W = np.zeros((N,N))
     for row in data:
         i, j, w = row
@@ -50,8 +49,8 @@ def read_W(data_address):
 
 #P1 connection matrix copied from Jansen network
 W = read_W('Data/data.dat')
-#initial conditions:
-X0 = np.append(np.ones((N, 5)),np.zeros((N, 5)), axis = 1 )
+#initial conditions: (0.2, 0) for every neural pop
+X0 = np.append(np.ones((N, 5))*0.2,np.zeros((N, 5)), axis = 1 )
 dx = np.zeros((N, 10))
 
 
@@ -80,15 +79,15 @@ def Network_LaNMM(x,t):
     return dx.flatten()
 
 t0 = time()
-t = np.arange(0, 10, 0.0005)
-print(np.shape(X0))
+timestep = 0.001
+t = np.arange(98, 100, timestep)
 result = odeint(Network_LaNMM,  X0.flatten(), t)
 result = np.reshape(result, (len(t), N, 10))
-print(np.shape(result))
 
 
 t0 = time()-t0
 print('exeution time: ', t0)
+
 for i in range(0, N, 10):
     plt.scatter(t, result[:,i,0], label = 'P1 cells of the second pop')
 #plt.legend()
