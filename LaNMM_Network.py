@@ -31,8 +31,16 @@ I1, I2 = (A_AMPA/a_AMPA)*p1, (A_AMPA/a_AMPA)*p2
 epsilon = 10 #cross region connectivity
 N = 90 #Number of regions
 
-def read_W(data_address):
-    #ad hoc function for reading data
+def read_W(data_address): 
+    """
+    Reads a data file that contains connectivity information between regions and returns the connectivity matrix.
+
+    Parameters:
+    data_file_path (str): the path to the data file.
+
+    Returns:
+    W (np.ndarray): a numpy array that represents the connectivity matrix between regions.
+    """
     data = np.genfromtxt(data_address,
                      skip_header=1,
                      names=True,
@@ -55,7 +63,16 @@ dx = np.zeros((N, 10))
 
 
 def Network_LaNMM(x,t):
-    #at each time calculate the input from other columns as matrix*input column (in this case P1->P1):
+    """
+    Simulates the LaNMM network model.
+
+    Parameters:
+    x (np.ndarray): a numpy array that contains the initial conditions for the model.
+    t (np.ndarray): a numpy array that contains the time points at which the simulation should be evaluated.
+
+    Returns:
+    dx.flatten() (np.ndarray): a flattened numpy array that contains the state of the model at each time point.
+    """
     x = np.reshape(x, (N, 10))
     ext_p1 = epsilon*np.dot(W, x[:, 0])
 
