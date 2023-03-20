@@ -15,7 +15,9 @@ p = []
 prob = ODEProblem(myODE, u0, tspan, p)
 sol = solve(prob)
 
+print("EHLAMADò")
 # Plot the solution
 using Plots
 plot(sol)
-print("EHLAMADò")
+
+
