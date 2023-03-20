@@ -109,7 +109,7 @@ def Network_LaNMM(x,t):
 
 t0 = time()
 timestep = 0.001
-t = np.append([0],np.arange(98, 100, timestep))#0 as inital condition and then the remote convergence points
+t =np.arange(98, 100, timestep)#0 as inital condition and then the remote convergence points
 result = odeint(Network_LaNMM,  X0.flatten(), t)
 result = np.reshape(result, (len(t), N, 10))
 
