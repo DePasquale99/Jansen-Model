@@ -51,12 +51,15 @@ def read_W(data_address):
     for row in data:
         i, j, w = row
         W[i,j] = w
+
+    np.save('Data/data', W)
         
     return W
 
 
 #P1 connection matrix copied from Jansen network
-W = read_W('Data/data.dat')
+#read_W('Data/data.dat')
+W = np.load('Data/data.npy')
 #initial conditions: (0.2, 0) for every neural pop
 X0 = np.append(np.ones((N, 5))*0.2,np.zeros((N, 5)), axis = 1 )
 dx = np.zeros((N, 10))
@@ -106,7 +109,7 @@ def Network_LaNMM(x,t):
 
 t0 = time()
 timestep = 0.001
-t = np.arange(98, 100, timestep)
+t = np.append([0],np.arange(98, 100, timestep))#0 as inital condition and then the remote convergence points
 result = odeint(Network_LaNMM,  X0.flatten(), t)
 result = np.reshape(result, (len(t), N, 10))
 
@@ -114,9 +117,5 @@ result = np.reshape(result, (len(t), N, 10))
 t0 = time()-t0
 print('exeution time: ', t0)
 
-for i in range(0, N, 10):
-    plt.scatter(t, result[:,i,0], label = 'P1 cells of the second pop')
-#plt.legend()
-plt.show()
 
-print('print time: ', time()-t0)
+np.save('Data/results', result[1:])#discard the initial condition point
