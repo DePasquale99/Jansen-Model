@@ -31,8 +31,16 @@ I1, I2 = (A_AMPA/a_AMPA)*p1, (A_AMPA/a_AMPA)*p2
 epsilon = 10 #cross region connectivity
 N = 90 #Number of regions
 
-def read_W(data_address):
-    #ad hoc function for reading data
+def read_W(data_address): 
+    """
+    Reads a data file that contains connectivity information between regions and returns the connectivity matrix.
+
+    Parameters:
+    data_file_path (str): the path to the data file.
+
+    Returns:
+    W (np.ndarray): a numpy array that represents the connectivity matrix between regions.
+    """
     data = np.genfromtxt(data_address,
                      skip_header=1,
                      names=True,
@@ -43,44 +51,65 @@ def read_W(data_address):
     for row in data:
         i, j, w = row
         W[i,j] = w
+
+    np.save('Data/data', W)
         
     return W
 
 
 #P1 connection matrix copied from Jansen network
-W = read_W('Data/data.dat')
+#read_W('Data/data.dat')
+W = np.load('Data/data.npy')
 #initial conditions: (0.2, 0) for every neural pop
 X0 = np.append(np.ones((N, 5))*0.2,np.zeros((N, 5)), axis = 1 )
 dx = np.zeros((N, 10))
 
+def LaNMM(x,t=0):
+    #Modified function for iteration in the network
+    dx0 = x[5] #P1 population
+    dx5 = A_AMPA*a_AMPA*(sigma(C10*x[3]+C1*x[2]+C0*x[1]+I1 + x[10], v0))-2*a_AMPA*x[5]-a_AMPA**2*x[0]
+
+    dx1 = x[6] # SS population
+    dx6 = A_AMPA*a_AMPA*(sigma(C3*x[0], v0))-2*a_AMPA*x[6]-a_AMPA**2*x[1]
+
+    dx2 = x[7] #SST population
+    dx7 = A_GABAs*a_GABAs*sigma(C4*x[0], v0) -2*a_GABAs*x[7] -a_GABAs**2*x[2]
+
+    dx3 = x[8] #P2 population
+    dx8 = A_AMPA*a_AMPA*sigma(C11*x[0]+ C5*x[3] + C6*x[4]+ I2, v0_p2) -2*a_AMPA*x[8] -a_AMPA**2*x[3]
+
+    dx4 = x[9] #PV population
+    dx9 = A_GABAf*a_GABAf*sigma(C12*x[0] + C8*x[3] + C9*x[4], v0) -2*a_GABAf*x[9] - a_GABAf**2*x[4]    
+
+    dx = [dx0, dx1, dx2, dx3, dx4, dx5, dx6, dx7, dx8, dx9]
+
+    return dx
+
+
 
 def Network_LaNMM(x,t):
-    #at each time calculate the input from other columns as matrix*input column (in this case P1->P1):
+    """
+    Simulates the LaNMM network model.
+
+    Parameters:
+    x (np.ndarray): a numpy array that contains the initial conditions for the model.
+    t (np.ndarray): a numpy array that contains the time points at which the simulation should be evaluated.
+
+    Returns:
+    dx.flatten() (np.ndarray): a flattened numpy array that contains the state of the model at each time point.
+    """
     x = np.reshape(x, (N, 10))
     ext_p1 = epsilon*np.dot(W, x[:, 0])
+    x = np.append(x, np.transpose([ext_p1]), axis= 1) #add the input as 11th variable of the system, it should be automatically removed by odeint
 
-    for i in range(N):
-        #for every region of the brain we calculate the update
-        dx[i,0] = x[i,5] #P1 population
-        dx[i,5] = A_AMPA*a_AMPA*(sigma(C10*x[i,3]+C1*x[i,2]+C0*x[i,1]+I1 +ext_p1[i], v0))-2*a_AMPA*x[i,5]-a_AMPA**2*x[i,0]
-
-        dx[i,1] = x[i,6] # SS population
-        dx[i,6] = A_AMPA*a_AMPA*(sigma(C3*x[i,0], v0))-2*a_AMPA*x[i,6]-a_AMPA**2*x[i,1]
-
-        dx[i,2] = x[i,7] #SST population
-        dx[i,7] = A_GABAs*a_GABAs*sigma(C4*x[i,0], v0) -2*a_GABAs*x[i,7] -a_GABAs**2*x[i,2]
-
-        dx[i,3] = x[i,8] #P2 population
-        dx[i,8] = A_AMPA*a_AMPA*sigma(C11*x[i,0]+ C5*x[i,3] + C6*x[i,4]+ I2, v0_p2) -2*a_AMPA*x[i,8] -a_AMPA**2*x[i,3]
-
-        dx[i,4] = x[i,9] #PV population
-        dx[i,9] = A_GABAf*a_GABAf*sigma(C12*x[i,0] + C8*x[i,3] + C9*x[i,4], v0) -2*a_GABAf*x[i,9] - a_GABAf**2*x[i,4]    
+    #iteration with numpy:
+    dx = np.apply_along_axis(LaNMM, 1, x)
 
     return dx.flatten()
 
 t0 = time()
 timestep = 0.001
-t = np.arange(98, 100, timestep)
+t =np.arange(98, 100, timestep)#0 as inital condition and then the remote convergence points
 result = odeint(Network_LaNMM,  X0.flatten(), t)
 result = np.reshape(result, (len(t), N, 10))
 
@@ -88,9 +117,5 @@ result = np.reshape(result, (len(t), N, 10))
 t0 = time()-t0
 print('exeution time: ', t0)
 
-for i in range(0, N, 10):
-    plt.scatter(t, result[:,i,0], label = 'P1 cells of the second pop')
-#plt.legend()
-plt.show()
 
-print('print time: ', time()-t0)
+np.save('Data/results', result[1:])#discard the initial condition point
