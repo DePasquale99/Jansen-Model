@@ -6,13 +6,13 @@ data = np.load('Data/results.npy')
 
 print(np.shape(data))
 
-timepoints, N, variables = np.shape(data)
+N, variables, timepoints = np.shape(data)
 print(timepoints)
 def time_series(data):
     P1 = np.zeros((N, timepoints))
     for i in range(N):
         for j in range(timepoints):
-            P1[i,j] = data[j,i,0]
+            P1[i,j] = data[i,0,j]
     plt.imshow(P1)
     plt.show()
 
@@ -22,7 +22,7 @@ def time_series(data):
 def plot(data):
     t = np.linspace(0, 2, timepoints)
     for i in range(0, N, 10):
-        plt.scatter(t[1:], data[1:,i,0])
+        plt.scatter(t[1:], data[:,i,0])
     plt.show()
     return 0
 

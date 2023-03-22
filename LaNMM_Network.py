@@ -2,8 +2,9 @@
 
 import numpy as np
 from scipy.integrate import odeint
-import matplotlib.pyplot as plt
+from scipy.integrate import solve_ivp
 from time import time
+import matplotlib.pyplot as plt
 ###Parameters for LaNMM model
 
 e0 = 2.5 #half of the maximum firing rate (Hz)
@@ -64,7 +65,7 @@ W = np.load('Data/data.npy')
 X0 = np.append(np.ones((N, 5))*0.2,np.zeros((N, 5)), axis = 1 )
 dx = np.zeros((N, 10))
 
-def LaNMM(x,t=0):
+def LaNMM(x, t=0):
     #Modified function for iteration in the network
     dx0 = x[5] #P1 population
     dx5 = A_AMPA*a_AMPA*(sigma(C10*x[3]+C1*x[2]+C0*x[1]+I1 + x[10], v0))-2*a_AMPA*x[5]-a_AMPA**2*x[0]
@@ -81,13 +82,13 @@ def LaNMM(x,t=0):
     dx4 = x[9] #PV population
     dx9 = A_GABAf*a_GABAf*sigma(C12*x[0] + C8*x[3] + C9*x[4], v0) -2*a_GABAf*x[9] - a_GABAf**2*x[4]    
 
-    dx = [dx0, dx1, dx2, dx3, dx4, dx5, dx6, dx7, dx8, dx9]
+    dx = np.array([dx0, dx1, dx2, dx3, dx4, dx5, dx6, dx7, dx8, dx9])
 
     return dx
 
 
 
-def Network_LaNMM(x,t):
+def Network_LaNMM(t,x):
     """
     Simulates the LaNMM network model.
 
@@ -98,7 +99,7 @@ def Network_LaNMM(x,t):
     Returns:
     dx.flatten() (np.ndarray): a flattened numpy array that contains the state of the model at each time point.
     """
-    x = np.reshape(x, (N, 10))
+    x = x.reshape((N, 10))
     ext_p1 = epsilon*np.dot(W, x[:, 0])
     x = np.append(x, np.transpose([ext_p1]), axis= 1) #add the input as 11th variable of the system, it should be automatically removed by odeint
 
@@ -109,14 +110,22 @@ def Network_LaNMM(x,t):
 
 t0 = time()
 timestep = 0.001
-t =np.arange(98, 100, timestep)#0 as inital condition and then the remote convergence points
-t = np.insert(t, 0, 0)#0 as inital condition and then the remote convergence points
-result = odeint(Network_LaNMM,  X0.flatten(), t, h0= timestep)
+t_eval =np.arange(98, 100, timestep)#0 as inital condition and then the remote convergence points
+'''
+old integration method
+result = odeint(Network_LaNMM,  X0.flatten(), t)
 result = np.reshape(result, (len(t), N, 10))
-
-
+'''
+result = solve_ivp(Network_LaNMM, [0, 100], X0.flatten(), t_eval=t_eval)
 t0 = time()-t0
 print('exeution time: ', t0)
 
+Y = np.reshape(result.y, ( N, 10,len(t_eval)))
 
-np.save('Data/results', result[1:])#discard the initial condition point
+
+plt.scatter(t_eval, Y[0,0,:])
+plt.show()
+
+
+
+np.save('Data/results', Y)#discard the initial condition point
