@@ -22,9 +22,9 @@ def time_series(data):
 def plot(data):
     t = np.linspace(0, 2, timepoints)
     for i in range(0, N, 10):
-        plt.scatter(t[1:], data[:,i,0])
+        plt.scatter(t[:], data[i,0,:])
     plt.show()
     return 0
 
-plot(data)
-#time_series(data)
+#plot(data)
+time_series(data)

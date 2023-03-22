@@ -110,13 +110,8 @@ def Network_LaNMM(t,x):
 
 t0 = time()
 timestep = 0.001
-t_eval =np.arange(98, 100, timestep)#0 as inital condition and then the remote convergence points
-'''
-old integration method
-result = odeint(Network_LaNMM,  X0.flatten(), t)
-result = np.reshape(result, (len(t), N, 10))
-'''
-result = solve_ivp(Network_LaNMM, [0, 100], X0.flatten(), t_eval=t_eval)
+t_eval =np.arange(998, 1000, timestep)
+result = solve_ivp(Network_LaNMM, [0, 1000], X0.flatten(), t_eval=t_eval)
 t0 = time()-t0
 print('exeution time: ', t0)
 
