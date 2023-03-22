@@ -26,5 +26,5 @@ def plot(data):
     plt.show()
     return 0
 
-#plot(data)
-time_series(data)
+plot(data)
+#time_series(data)
