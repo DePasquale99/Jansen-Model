@@ -9,4 +9,4 @@ Assets
 *.png                   
 Julia
 dummy
-
+__pycache__
