@@ -7,10 +7,10 @@ def RK4(func, y0, timepoints, args=()):
     y[0] = y0
     for i in range(len(timepoints)-1):
         h = timepoints[i+1]-timepoints[i]
-        k1 = func(t[i], y[i], *args)
-        k2 = func(t[i]+h/2, y[i]+k1*h/2, *args)
-        k3 = func(t[i]+ h/2, y[i] +k2*h/2, *args)
-        k4 = func(t[i]+ h, y[i]+k3*h, *args)
+        k1 = func(timepoints[i], y[i], *args)
+        k2 = func(timepoints[i]+h/2, y[i]+k1*h/2, *args)
+        k3 = func(timepoints[i]+ h/2, y[i] +k2*h/2, *args)
+        k4 = func(timepoints[i]+ h, y[i]+k3*h, *args)
         y[i+1] = y[i] + (h/6)*(k1 +2*k2 +2*k3 +k4)
     return y
 
