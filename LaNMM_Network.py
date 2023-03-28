@@ -1,10 +1,14 @@
 #Goal : to implement a network of n regions modelled by LaNMM modeland connect them via a matrix W
 
 import numpy as np
-from scipy.integrate import odeint
 from scipy.integrate import solve_ivp
 from time import time
 import matplotlib.pyplot as plt
+import py_compile
+import cProfile
+from numba import jit
+
+py_compile.compile('LaNMM_Network.py')
 ###Parameters for LaNMM model
 
 e0 = 2.5 #half of the maximum firing rate (Hz)
@@ -12,7 +16,8 @@ v0 = 6 #potential at which half of the maximum firing rate is achieved (mV)
 v0_p2 = 1
 r = 0.56 #slope of the sigmoid at v = v0 (mV^-1)
 
-def sigma(x, v0): 
+@jit
+def sigma(x, v0) -> float: 
     #Wave to pulse operator, transforms the average membrane potential of a population into average firing rate
     return 2*e0 / (1+ np.exp(r*(v0- x)))
 
@@ -29,7 +34,7 @@ I1, I2 = (A_AMPA/a_AMPA)*p1, (A_AMPA/a_AMPA)*p2
 
 
 ############################################### Actual network model
-epsilon = 10 #cross region connectivity
+epsilon = 0 #cross region connectivity
 N = 90 #Number of regions
 
 def read_W(data_address): 
@@ -57,14 +62,28 @@ def read_W(data_address):
         
     return W
 
+def normalize_data(W):
+    #takes the W matrix and normalizes the data by row:
+    norm = np.sum(W, axis = 1)
+    for idx, i in enumerate(norm):
+        W[idx] /= i
+    return W
+
+
+
 
 #P1 connection matrix copied from Jansen network
 #read_W('Data/data.dat')
 W = np.load('Data/data.npy')
+W = normalize_data(W)
+
+#assert np.isclose(np.sum(W, axis=1), np.ones((N)))
+
 #initial conditions: (0.2, 0) for every neural pop
 X0 = np.append(np.ones((N, 5))*0.2,np.zeros((N, 5)), axis = 1 )
 dx = np.zeros((N, 10))
 
+@jit
 def LaNMM(x, t=0):
     #Modified function for iteration in the network
     dx0 = x[5] #P1 population
@@ -77,7 +96,7 @@ def LaNMM(x, t=0):
     dx7 = A_GABAs*a_GABAs*sigma(C4*x[0], v0) -2*a_GABAs*x[7] -a_GABAs**2*x[2]
 
     dx3 = x[8] #P2 population
-    dx8 = A_AMPA*a_AMPA*sigma(C11*x[0]+ C5*x[3] + C6*x[4]+ I2, v0_p2) -2*a_AMPA*x[8] -a_AMPA**2*x[3]
+    dx8 = A_AMPA*a_AMPA*sigma(C11*x[0]+ C5*x[3] + C6*x[4]+ I2 + x[11], v0_p2) -2*a_AMPA*x[8] -a_AMPA**2*x[3]
 
     dx4 = x[9] #PV population
     dx9 = A_GABAf*a_GABAf*sigma(C12*x[0] + C8*x[3] + C9*x[4], v0) -2*a_GABAf*x[9] - a_GABAf**2*x[4]    
@@ -87,7 +106,7 @@ def LaNMM(x, t=0):
     return dx
 
 
-
+@jit
 def Network_LaNMM(t,x):
     """
     Simulates the LaNMM network model.
@@ -100,27 +119,32 @@ def Network_LaNMM(t,x):
     dx.flatten() (np.ndarray): a flattened numpy array that contains the state of the model at each time point.
     """
     x = x.reshape((N, 10))
-    ext_p1 = epsilon*np.dot(W, x[:, 0])
-    x = np.append(x, np.transpose([ext_p1]), axis= 1) #add the input as 11th variable of the system, it should be automatically removed by odeint
+    ext_p1 = .5*epsilon*np.dot(W, x[:, 0]) 
+    ext_p2 = .5*epsilon*np.dot(W, x[:,0]) + epsilon*np.dot(W, x[:,3])
 
+    x = np.append(x, np.transpose([ext_p1]), axis= 1) #add the input as 11th variable of the system
+    x =np.append(x, np.transpose([ext_p2]), axis = 1) #same but for p2
     #iteration with numpy:
     dx = np.apply_along_axis(LaNMM, 1, x)
 
     return dx.flatten()
 
-t0 = time()
-timestep = 0.001
-t_eval =np.arange(998, 1000, timestep)
-result = solve_ivp(Network_LaNMM, [0, 1000], X0.flatten(), t_eval=t_eval)
-t0 = time()-t0
-print('exeution time: ', t0)
 
-Y = np.reshape(result.y, ( N, 10,len(t_eval)))
+def main():
+    #executes the iteration using solve ivp and RK45
+    t0 = time()
+    timestep = 0.001
+    t_eval =np.arange(998, 1000, timestep)
+    result = solve_ivp(Network_LaNMM, [0, 1000], X0.flatten(), t_eval=t_eval)
+    t0 = time()-t0
+    print('execution time: ', t0)
 
+    Y = np.reshape(result.y, ( N, 10,len(t_eval)))
 
-plt.scatter(t_eval, Y[0,0,:])
-plt.show()
+    
+    np.save('Data/results', Y)
+    return
 
+#cProfile.run('main()')
 
-
-np.save('Data/results', Y)#discard the initial condition point
+main()
