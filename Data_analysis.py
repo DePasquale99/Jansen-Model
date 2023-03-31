@@ -45,13 +45,13 @@ def plot(data):
     plt.title('P1 examples')
     for i in range(0, N, 30):
         label = 'population ' + str(i)
-        plt.scatter(t[:], data[i,0,:], label=label)
+        plt.plot(t[:], data[i,0,:], label=label)
 
     plt.subplot(212)
     plt.title('P2 examples')
     for i in range(0, N, 30):
         label = 'population ' + str(i)
-        plt.scatter(t[:], data[i,3,:], label=label)
+        plt.plot(t[:], data[i,3,:], label=label)
     plt.legend()
     plt.show()
 
