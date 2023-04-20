@@ -34,7 +34,7 @@ I1, I2 = (A_AMPA/a_AMPA)*p1, (A_AMPA/a_AMPA)*p2
 
 
 ############################################### Actual network model
-epsilon = 0 #cross region connectivity
+epsilon = 10 #cross region connectivity
 N = 90 #Number of regions
 
 def read_W(data_address): 
