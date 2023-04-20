@@ -33,7 +33,7 @@ I1, I2 = (A_AMPA/a_AMPA)*p1, (A_AMPA/a_AMPA)*p2
 
 
 ############################################### Actual network model
-epsilon = 0 #cross region connectivity
+epsilon = 10 #cross region connectivity
 N = 90 #Number of regions
 
 def read_W(data_address): 
@@ -132,7 +132,7 @@ def Network_LaNMM(t,x):
 
 #Model parameters:
 
-epsilon = .5 #efficacy with which a neural activity induces an increase in signal
+eff = .5 #efficacy with which a neural activity induces an increase in signal
 tau_s =  .8 #signal decay time constant
 tau_f = .4 #autoregolatory blood flow feedback 
 tau_0 = 1 #mean transit time
@@ -155,30 +155,6 @@ def E(f_in):
     return 1 - (1-E_0)**(1/f_in)
 
 
-
-def balloon(t, x):
-    '''
-
-    Function for integration of the BOLD signal model; takes:
-    t: time of the previous step of integration
-    x. state of the system at the previous step of interation
-    Returns: dx, vector containing the finite differences between the previous and next step of integration
-
-    '''
-    ds, df_in, dv, dq = np.zeros((4,N))*0.1
-    s, f_in, v, q = np.reshape(x, (4,N))
-    for i in range(N):
-
-        ds[i] = epsilon*guess_the_U(i,t) -s[i]/tau_s -(f_in[i] -1)/tau_f
-
-        df_in[i] = s[i]
-
-        dv[i] = f_in[i] - f_out(v[i])
-
-        dq[i] = f_in[i]*E(f_in[i])/(E_0*tau_0) - f_out(v[i])*q[i]/(v[i]*tau_0)
-
-    return np.array([ds, df_in, dv, dq]).flatten()
-
 def BOLD(x):
     '''
 
@@ -198,7 +174,7 @@ def main():
     #executes the iteration using solve ivp and RK45
     t0 = time()
     timestep = 0.001
-    t_eval =np.arange(998, 1000, timestep)
+    t_eval =np.arange(900, 1000, timestep)
     result = solve_ivp(Network_LaNMM, [0, 1000], X0.flatten(), t_eval=t_eval, dense_output=True)
     t0 = time()-t0
     print('execution time: ', t0)
@@ -206,11 +182,18 @@ def main():
     Y = np.reshape(result.y, ( N, 10,len(t_eval)))
 
     
-    np.save('Data/results', Y)
+    #np.save('Data/results', Y)
 
     #now I have to pass to the next integration function the function that gives the input signal for every time t
     
-
+    def PSP(t):
+        #function that calculates the total piramidal PSP for a given time t
+        full_sol = result.sol(t)
+        x = np.zeros((N))
+        for i in range(N):
+            x[i] = full_sol[i*10]+full_sol[i*10+1] + full_sol[i*10+3]
+        
+        return x
 
     def balloon_continue(t, x):
         '''
@@ -221,22 +204,49 @@ def main():
         Returns: dx, vector containing the finite differences between the previous and next step of integration
 
         '''
-        U = result.sol(t)
+        U = PSP(t)
 
         ds, df_in, dv, dq = np.zeros((4,N))*0.1
         s, f_in, v, q = np.reshape(x, (4,N))
         for i in range(N):
 
-            ds[i] = epsilon*U[i] -s[i]/tau_s -(f_in[i] -1)/tau_f
+            ds[i] = eff*U[i] -s[i]/tau_s -(f_in[i] -1)/tau_f
 
             df_in[i] = s[i]
 
-            dv[i] = f_in[i] - f_out(v[i])
+            dv[i] = f_in[i]/tau_0 - f_out(v[i])/tau_0
 
             dq[i] = f_in[i]*E(f_in[i])/(E_0*tau_0) - f_out(v[i])*q[i]/(v[i]*tau_0)
 
         return np.array([ds, df_in, dv, dq]).flatten()
+    
+    x0 = np.ones((4,N))*0.01
+    #integration using 
+    solution = solve_ivp(balloon_continue, [900, 1000], x0.flatten(), t_eval = t_eval )
 
+    balloon = np.reshape(solution.y, ( N, 4,len(t_eval))) #this is all of the 4 variables
+    
+    plt.subplot(211)
+    plt.plot(t_eval, balloon[1,2,:])
+
+
+    plt.subplot(212)
+    plt.plot(t_eval, balloon[1,3,:])
+
+    plt.show()
+    
+
+
+    X = np.array([balloon[:,2,:], balloon[:,3,:]]) #I extracted the v and q slices
+    print(np.shape(X))
+    signal = np.apply_along_axis(BOLD, 0, X)
+    print(np.shape(signal))
+    t0 = time()-t0
+    print('execution time: ', t0)
+    plt.plot(t_eval, signal[1])
+    plt.show()
+
+    np.save('Data/BOLD', signal)
     return
 
 main()

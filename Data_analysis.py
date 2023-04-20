@@ -8,6 +8,8 @@ print(np.shape(data))
 
 N, variables, timepoints = np.shape(data)
 print(timepoints)
+
+
 def time_series(data):
     P1 = np.zeros((N, timepoints))
     P2 = np.zeros((N, timepoints))

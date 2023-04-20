@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 At the moment I have 2000 points of u(t) for every brain area:
 => I can't have u(t) for every t, and this is a problem for the integrator
 SOLUTION => print dense output for u(t) and then use it to integrate 
-PROBLEM: I think I'm no more able to interate the BOLD signal separately :(
+PROBLEM: I think I'm no more able to integrate the BOLD signal separately :(
 OTHER SOLUTION: linearly approx any time t by weihting the two closest t's
 '''
 
@@ -97,25 +97,10 @@ def BOLD(x):
     return V_0*(k1*(1-q) +k2*(1-q/v) +k3*(1-v))
 
 
-
-
-def RK4(func, y0, timepoints, args=()):
-    y = np.zeros((len(timepoints), len(y0)))
-    y[0] = y0
-    for i in range(len(timepoints)-1):
-        h = timepoints[i+1]-timepoints[i]
-        k1 = func(timepoints[i], y[i], *args)
-        k2 = func(timepoints[i]+h/2, y[i]+k1*h/2, *args)
-        k3 = func(timepoints[i]+ h/2, y[i] +k2*h/2, *args)
-        k4 = func(timepoints[i]+ h, y[i]+k3*h, *args)
-        y[i+1] = y[i] + (h/6)*(k1 +2*k2 +2*k3 +k4)
-    return y
-
-
 def main():
     timestep = 0.001
     t =np.arange(998, 1000, timestep)
-    X0 = np.ones((4,N))*0.1
+    X0 = np.ones((4,N))*0.01
     
     #using RK4:
     '''
@@ -134,7 +119,7 @@ def main():
 
     print(np.shape(signal))
 
-    plt.plot(np.arange(2000), signal[89, :])
+    plt.plot(np.arange(2000), signal[9, :])
     plt.show()
 
 
