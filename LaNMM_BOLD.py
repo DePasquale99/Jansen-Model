@@ -189,10 +189,9 @@ def main():
     def PSP(t):
         #function that calculates the total piramidal PSP for a given time t
         full_sol = result.sol(t)
-        full_sol = np.reshape(full_sol, (10, N)).transpose()
         x = np.zeros((N))
-        for i, sol in enumerate(full_sol):
-            x[i] = sol[0]+sol[1] + sol[3]
+        for i in range(N):
+            x[i] = full_sol[i*10]+full_sol[i*10+1] + full_sol[i*10+3]
         
         return x
 
@@ -208,7 +207,7 @@ def main():
         U = PSP(t)
 
         ds, df_in, dv, dq = np.zeros((4,N))
-        s, f_in, v, q = np.reshape(x, (4,N))
+        s, f_in, v, q = np.reshape(x, (N,4)).transpose()
         for i in range(N):
 
             ds[i] = eff*U[i] -s[i]/tau_s -(f_in[i] -1)/tau_f
@@ -219,11 +218,11 @@ def main():
 
             dq[i] = f_in[i]*E(f_in[i])/(E_0*tau_0) - f_out(v[i])*q[i]/(v[i]*tau_0)
 
-        return np.array([ds, df_in, dv, dq]).flatten()
+        return np.array([ds, df_in, dv, dq]).transpose().flatten()
     
     x0 = np.ones((4,N))*0.01
-    #integration using 
-    t_BOLD = np.arange(900, 1000, 0.1)
+    #integration using solve ivp:
+    t_BOLD = np.arange(900, 1000, 0.01)
     solution = solve_ivp(balloon_continue, [900, 1000], x0.flatten(), t_eval = t_BOLD )
 
     balloon = np.reshape(solution.y, ( N, 4,len(t_BOLD))) #this is all of the 4 variables

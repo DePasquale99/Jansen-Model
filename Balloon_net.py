@@ -28,15 +28,13 @@ data = np.load('Data/results.npy')
 N, variables, timepoints = np.shape(data)
 
 #signal is formed by the sum of the PSP of every excitatory population in the column, namely 0,1 and 3
-#Only one node is taken for the moment
-node = 45
-U = data[node,0,:] + data[node,1,:] + data[node,3,:]
+U = data[:,0,:] + data[:,1,:] + data[:,3,:]
 
 print(np.shape(U))
 
-def guess_the_U(t):
+def guess_the_U(i, t):
     #uses linear approx to find the value of t for a generical t(not multiple of timestep)
-    x = U #selects the right cortical column
+    x = U[i] #selects the right cortical column
     t_approx = round(t)#based on the rounding, calculates the linear approx:
     if t_approx >= t:
         if t_approx<len(x)-1:
@@ -52,17 +50,16 @@ def guess_the_U(t):
         else:
             return (x[t_approx])
 
-
-#outwards flux 
-f_out = lambda v: v**(1/alpha)
-
-
-#effective oxygen extraction fraction
-E = lambda f_in: 1 - (1-E_0)**(1/f_in)
+def f_out(v):
+    #flux towards the outside of the blood vessel
+    return v**(1/alpha)
 
 
-#actual bold signal
-bold = lambda v,q: V_0*(k1*(1-q) +k2*(1-q/v) +k3*(1-v))
+
+def E(f_in): 
+    #effective oxygen extraction fraction
+    return 1 - (1-E_0)**(1/f_in)
+
 
 
 def balloon(t, x):
@@ -74,18 +71,19 @@ def balloon(t, x):
     Returns: dx, vector containing the finite differences between the previous and next step of integration
 
     '''
-    s, f_in, v, q = x
+    ds, df_in, dv, dq = np.zeros((4,N))
+    s, f_in, v, q = np.reshape(x, (N,4)).transpose()
+    for i in range(N):
 
-    ds = epsilon*guess_the_U(t) -s/tau_s -(f_in -1)/tau_f
+        ds[i] = epsilon*guess_the_U(i,t) -s[i]/tau_s -(f_in[i] -1)/tau_f
 
-    df_in = s
+        df_in[i] = s[i]
 
-    dv = f_in - f_out(v)
+        dv[i] = f_in[i] - f_out(v[i])
 
-    dq = f_in*E(f_in)/(E_0*tau_0) - f_out(v)*q/(v*tau_0)
+        dq[i] = f_in[i]*E(f_in[i])/(E_0*tau_0) - f_out(v[i])*q[i]/(v[i]*tau_0)
 
-    return np.array([ds, df_in, dv, dq])
-
+    return np.array([ds, df_in, dv, dq]).transpose().flatten()
 
 def BOLD(x):
     '''
@@ -100,22 +98,28 @@ def BOLD(x):
 
 
 def main():
-    timestep = 0.01
-    t =np.arange(900, 1000, timestep)
-    X0 = np.ones((4))*0.01
+    timestep = 0.001
+    t =np.arange(998, 1000, timestep)
+    X0 = np.ones((4,N))*0.01
     
+    #using RK4:
+    '''
+    sol = RK4(balloon, X0.flatten(), np.arange(timepoints))
+    sol = np.reshape(sol, (timepoints, N, 4))
+    print(np.shape(sol))'''
+
     print(np.shape(X0))
-    Y = solve_ivp(balloon, (0, timepoints), X0.flatten(), t_eval=t, vectorized=True ).y
-
-    Y = np.reshape(Y, ( 4, len(t)))
-
+    Y = solve_ivp(balloon, (0, timepoints), X0.flatten(), t_eval=np.arange(timepoints), vectorized=True ).y
+    print(np.shape(Y))
+    Y = np.reshape(Y, (N, 4, timepoints))
     #extract p and q variables for bold conversion
-    X = np.array([Y[2],Y[3]])
+    X = np.array([Y[:,2,:],Y[:,3,:]])
+    print(np.shape(X))
     signal = np.apply_along_axis(BOLD, 0, X)
 
     print(np.shape(signal))
 
-    plt.plot(np.arange(len(t)), signal[:])
+    plt.plot(np.arange(2000), signal[9, :])
     plt.show()
 
 
