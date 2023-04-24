@@ -1,6 +1,7 @@
 
 #all of the files in the folder
 Data                  
+Data\results.npy
 #exception for the file
 #!Data\data.dat          
 #all of the folder

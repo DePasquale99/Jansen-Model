@@ -29,7 +29,7 @@ N, variables, timepoints = np.shape(data)
 
 #signal is formed by the sum of the PSP of every excitatory population in the column, namely 0,1 and 3
 #Only one node is taken for the moment
-node = 45
+node = 89
 U = data[node,0,:] + data[node,1,:] + data[node,3,:]
 
 print(np.shape(U))
