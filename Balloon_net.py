@@ -119,7 +119,7 @@ def main():
 
     print(np.shape(signal))
 
-    plt.plot(np.arange(2000), signal[9, :])
+    plt.plot(np.arange(10000), signal[9, :])
     plt.show()
 
 

@@ -167,6 +167,28 @@ def BOLD(x):
     return V_0*(k1*(1-q) +k2*(1-q/v) +k3*(1-v))
 
 
+def balloon(x):
+    '''
+
+    Function for integration of the BOLD signal model; takes:
+    t: time of the previous step of integration
+    x. state of the system at the previous step of interation
+    Returns: dx, vector containing the finite differences between the previous and next step of integration
+
+    '''
+    s, f_in, v, q, u = x
+
+    ds = epsilon*u -s/tau_s -(f_in -1)/tau_f
+
+    df_in = s
+
+    dv = f_in - f_out(v)
+
+    dq = f_in*E(f_in)/(E_0*tau_0) - f_out(v)*q/(v*tau_0)
+
+    return np.array([ds, df_in, dv, dq])
+
+
 
 
 
@@ -207,29 +229,23 @@ def main():
         U = PSP(t)
 
         ds, df_in, dv, dq = np.zeros((4,N))
-        s, f_in, v, q = np.reshape(x, (N,4)).transpose()
-        for i in range(N):
+        X = np.reshape(x, (N,4))
+        X = np.append(X, np.transpose([U]), axis= 1)
 
-            ds[i] = eff*U[i] -s[i]/tau_s -(f_in[i] -1)/tau_f
+        dx = np.apply_along_axis(balloon, 1, X)
 
-            df_in[i] = s[i]
-
-            dv[i] = f_in[i]/tau_0 - f_out(v[i])/tau_0
-
-            dq[i] = f_in[i]*E(f_in[i])/(E_0*tau_0) - f_out(v[i])*q[i]/(v[i]*tau_0)
-
-        return np.array([ds, df_in, dv, dq]).transpose().flatten()
+        return dx.flatten()
     
     x0 = np.ones((4,N))*0.01
     #integration using solve ivp:
     t_BOLD = np.arange(900, 1000, 0.01)
     solution = solve_ivp(balloon_continue, [900, 1000], x0.flatten(), t_eval = t_BOLD )
 
-    balloon = np.reshape(solution.y, ( N, 4,len(t_BOLD))) #this is all of the 4 variables
+    loon = np.reshape(solution.y, ( N, 4,len(t_BOLD))) #this is all of the 4 variables
     
     print('Balloon integration done')
 
-    X = np.array([balloon[:,2,:], balloon[:,3,:]]) #I extracted the v and q slices
+    X = np.array([loon[:,2,:], loon[:,3,:]]) #I extracted the v and q slices
     print(np.shape(X))
     signal = np.apply_along_axis(BOLD, 0, X)
     print(np.shape(signal))
