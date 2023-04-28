@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
-
+from scipy.stats import pearsonr
+import seaborn as sns
 
 data = np.load('Data/results.npy')
 
@@ -58,6 +59,31 @@ def plot(data):
     plt.show()
 
     return 
+
+def correlation(data):
+
+    N, datapoints = np.shape(data)
+
+    pearson_R = np.zeros((N,N))
+
+    for i in range(N):
+        for j in range(i):
+            R = pearsonr(data[i], data[j]).statistic
+            pearson_R[i, j] = R
+            pearson_R[j, i] = R
+
+
+    sns.heatmap(pearson_R)
+    plt.show()
+
+
+
+
+
+
+    return
+
+
 
 plot(data)
 time_series(data)

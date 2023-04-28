@@ -33,8 +33,8 @@ I1, I2 = (A_AMPA/a_AMPA)*p1, (A_AMPA/a_AMPA)*p2
 
 
 ############################################### Actual network model
-epsilon = 50 #cross region connectivity
-N = 90 #Number of regions
+epsilon = 10 #cross region connectivity
+N = 68 #Number of regions
 
 def read_W(data_address): 
     """
@@ -73,7 +73,7 @@ def normalize_data(W):
 
 #P1 connection matrix copied from Jansen network
 #read_W('Data/data.dat')
-W = np.load('Data/data.npy')
+W = np.load('Data/desikan.npy')
 W = normalize_data(W)
 
 #assert np.isclose(np.sum(W, axis=1), np.ones((N)))
@@ -204,7 +204,7 @@ def main():
     Y = np.reshape(result.y, ( N, 10,len(t_eval)))
 
     
-    np.save('Data/results', Y)
+    np.save('Data/desikan_results', Y)
 
     #now I have to pass to the next integration function the function that gives the input signal for every time t
     
@@ -227,8 +227,6 @@ def main():
 
         '''
         U = PSP(t)
-
-        ds, df_in, dv, dq = np.zeros((4,N))
         X = np.reshape(x, (N,4))
         X = np.append(X, np.transpose([U]), axis= 1)
 
@@ -252,7 +250,7 @@ def main():
     t0 = time()-t0
     print('execution time: ', t0)
 
-    np.save('Data/BOLD', signal)
+    np.save('Data/desikan_bold', signal)
     return
 
 main()
