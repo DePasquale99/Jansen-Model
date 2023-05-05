@@ -5,7 +5,8 @@ Data\results.npy
 #exception for the file
 #!Data\data.dat          
 #all of the folder
-Assets                  
+Assets 
+Marvin               
 #all of the png files
 *.png                   
 Julia
