@@ -3,12 +3,8 @@
 import numpy as np
 from scipy.integrate import solve_ivp
 from time import time
-import matplotlib.pyplot as plt
-import py_compile
-import cProfile
 from numba import jit
 
-py_compile.compile('LaNMM_Network.py')
 ###Parameters for LaNMM model
 
 e0 = 2.5 #half of the maximum firing rate (Hz)
@@ -84,7 +80,7 @@ X0 = np.append(np.ones((N, 5))*0.2,np.zeros((N, 5)), axis = 1 )
 dx = np.zeros((N, 10))
 
 @jit
-def LaNMM(x, t=0):
+def LaNMM(x, I1, I2, t=0):
     #Modified function for iteration in the network
     dx0 = x[5] #P1 population
     dx5 = A_AMPA*a_AMPA*(sigma(C10*x[3]+C1*x[2]+C0*x[1]+I1 + x[10], v0))-2*a_AMPA*x[5]-a_AMPA**2*x[0]
@@ -107,14 +103,15 @@ def LaNMM(x, t=0):
 
 
 @jit
-def Network_LaNMM(t,x):
+def Network_LaNMM(t,x, I1, I2, epsilon):
+
     """
     Simulates the LaNMM network model.
 
     Parameters:
     x (np.ndarray): a numpy array that contains the initial conditions for the model.
     t (np.ndarray): a numpy array that contains the time points at which the simulation should be evaluated.
-
+    I1 (float): value of the input current to the first neuron
     Returns:
     dx.flatten() (np.ndarray): a flattened numpy array that contains the state of the model at each time point.
     """
@@ -125,7 +122,7 @@ def Network_LaNMM(t,x):
     x = np.append(x, np.transpose([ext_p1]), axis= 1) #add the input as 11th variable of the system
     x =np.append(x, np.transpose([ext_p2]), axis = 1) #same but for p2
     #iteration with numpy:
-    dx = np.apply_along_axis(LaNMM, 1, x)
+    dx = np.apply_along_axis(LaNMM, 1, x, I1, I2)
 
     return dx.flatten()
 
@@ -135,7 +132,7 @@ def main():
     t0 = time()
     timestep = 0.001
     t_eval =np.arange(998, 1000, timestep)
-    result = solve_ivp(Network_LaNMM, [0, 1000], X0.flatten(), t_eval=t_eval)
+    result = solve_ivp(Network_LaNMM, [0, 1000], X0.flatten(), t_eval=t_eval, args=(I1, I2, epsilon))
     t0 = time()-t0
     print('execution time: ', t0)
 
@@ -145,6 +142,16 @@ def main():
     np.save('Data/results', Y)
     return
 
-#cProfile.run('main()')
+def simulation(p1, p2, epsilon):
+    
+    filename = 'simulation_' + str(p1) + '_' + str(p2) + '_' + str(epsilon)
 
-main()
+    path = 'Data/pipeline/' + filename
+
+    I1, I2 = (A_AMPA/a_AMPA)*p1, (A_AMPA/a_AMPA)*p2
+    timestep = 0.001
+    t_eval =np.arange(900, 1000, timestep)
+    result = solve_ivp(Network_LaNMM, [0, 1000], X0.flatten(), t_eval=t_eval, args=(I1, I2, epsilon))
+    Y = result.y.reshape((N, 10, len(t_eval)))[:,:5,:]
+    np.save('Data/doomee', Y)
+    return Y

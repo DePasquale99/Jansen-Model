@@ -108,7 +108,6 @@ def main():
     sol = np.reshape(sol, (timepoints, N, 4))
     print(np.shape(sol))'''
 
-    print(np.shape(X0))
     Y = solve_ivp(balloon, (0, timepoints), X0.flatten(), t_eval=np.arange(timepoints), vectorized=True ).y
     print(np.shape(Y))
     Y = np.reshape(Y, (N, 4, timepoints))
@@ -125,12 +124,73 @@ def main():
 
     return
 
-main()
+
+def euler(func, y0, timepoints, args=()):
+
+    y = np.zeros((len(timepoints), len(y0)))
+    y[0] = y0
+    for i in range(len(timepoints)-1):
+        y[i+1]= y[i]+ func(timepoints[i], y[i], *args)
+    return y
 
 
 
+def Euler_balloon(t, x, *args):
+    '''
+
+    Function for integration of the BOLD signal model; takes:
+    t: time of the previous step of integration
+    x. state of the system at the previous step of interation
+    Returns: dx, vector containing the finite differences between the previous and next step of integration
+
+    '''
+    ds, df_in, dv, dq = np.zeros((4,N))
+    s, f_in, v, q = np.reshape(x, (N,4)).transpose()
+    U = args
+    for i in range(N):
+
+        ds[i] = epsilon*U[i][t] -s[i]/tau_s -(f_in[i] -1)/tau_f
+
+        df_in[i] = s[i]
+
+        dv[i] = f_in[i] - f_out(v[i])
+
+        dq[i] = f_in[i]*E(f_in[i])/(E_0*tau_0) - f_out(v[i])*q[i]/(v[i]*tau_0)
+
+    return np.array([ds, df_in, dv, dq]).transpose().flatten()
+
+
+def Euler_integration(input):
+    X0 = np.ones((4,N))*0.01
+    timepoints = np.arange(100000)
+    output = euler(Euler_balloon, X0.flatten(), timepoints, input).reshape(( len(timepoints),N, 4))
+
+    X = np.array([output[:,:,2],output[:,:,3]])
+    print(np.shape(X))
+    signal = np.apply_along_axis(BOLD, 0, X)
+    return signal
 
 
 
+def RK4(func, y0, timepoints, args=()):
+    y = np.zeros((len(timepoints), len(y0)))
+    y[0] = y0
+    for i in range(len(timepoints)-1):
+        h = timepoints[i+1]-timepoints[i]
+        k1 = func(timepoints[i], y[i], *args)
+        k2 = func(timepoints[i]+h/2, y[i]+k1*h/2, *args)
+        k3 = func(timepoints[i]+ h/2, y[i] +k2*h/2, *args)
+        k4 = func(timepoints[i]+ h, y[i]+k3*h, *args)
+        y[i+1] = y[i] + (h/6)*(k1 +2*k2 +2*k3 +k4)
+    return y
 
+def RK4_integration(input):
+    X0 = np.ones((4,N))*0.01
+    #using points each 2 steps in this way RK4 always finds an integer timestep call
+    timepoints = np.arange(0, 20000, 2)
+    output = RK4(Euler_balloon, X0.flatten(), timepoints, input).reshape((N, 4, len(timepoints)))
+    X = np.array([output[:,2,:],output[:,3,:]])
+    print(np.shape(X))
+    signal = np.apply_along_axis(BOLD, 0, X)
+    return signal
 

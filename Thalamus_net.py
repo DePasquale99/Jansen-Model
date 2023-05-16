@@ -154,7 +154,7 @@ def full_net(t, x):
 def main():
     # set the initial conditions:
 
-    X0 = np.ones((N*10 + (N/2)*6 + 6))*0.1
+    X0 = np.ones((N*10 + 6))*0.1
 
     system = solve_ivp(full_net, [0, 1000], X0, t_eval=np.arange(900, 1000, 0.001))
     

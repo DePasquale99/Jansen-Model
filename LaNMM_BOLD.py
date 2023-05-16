@@ -2,7 +2,8 @@
 import numpy as np
 from scipy.integrate import solve_ivp
 from numba import jit
-
+import tracemalloc
+import cProfile
 
 
 ###Parameters for LaNMM model
@@ -194,12 +195,12 @@ def main():
     #executes the iteration using solve ivp and RK45
     timestep = 0.01
     t_eval =np.arange(900, 1000, timestep)
-    result = solve_ivp(Network_LaNMM, [0, 1000], X0.flatten(), t_eval=t_eval, dense_output=True, args=(I1, I2, epsilon))
+    result = solve_ivp(Network_LaNMM, [0, 1000], X0.flatten(), dense_output=True, args=(I1, I2, epsilon))
 
-    Y = np.reshape(result.y, ( N, 10,len(t_eval)))
+    #Y = np.reshape(result.y, ( N, 10,len(t_eval)))S
 
     
-    np.save('Data/desikan_results', Y)
+    #np.save('Data/desikan_results', Y)
 
     #now I have to pass to the next integration function the function that gives the input signal for every time t
     
@@ -246,6 +247,12 @@ def main():
     np.save('Data/desikan_bold', signal)
     return
 
+#Performance control
+tracemalloc.start()
+main()
+print(tracemalloc.get_traced_memory())
+tracemalloc.stop()
+
 
 def simulation(p1, p2, epsilon):
     '''
@@ -283,7 +290,6 @@ def simulation(p1, p2, epsilon):
         t: time of the previous step of integration
         x. state of the system at the previous step of interation
         Returns: dx, vector containing the finite differences between the previous and next step of integration
-
         '''
         U = PSP(t)
         X = np.reshape(x, (N,4))
