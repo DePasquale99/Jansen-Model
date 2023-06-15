@@ -26,22 +26,24 @@ T0, T1, T2 = 10, 20, 30 #respectively connections TRN-> TC, TC->TRN, TC->TC
 C0, C1, C2, C3, C4, C5, C6, C7, C8, C9, C10, C11, C12 = 108, 33.7, 1, 135, 33.75, 70, 550, 1, 200, 100, 80, 200, 30
 
 #Input parameter of the model, sets the external input as an average firing rate
-p1, p2, th1 = 200, 150, 120 #p1 is noisy in the original model, produced by N(200,30)
+p1, p2, th1 = 200, 90, 120 #p1 is noisy in the original model, produced by N(200,30)
 #In order to transform from presynaptic firing rate to PSP (fixed point of second order eqt for p1,p2)
 I1, I2, It = (A_AMPA/a_AMPA)*p1, (A_AMPA/a_AMPA)*p2, (A_AMPA/a_AMPA)*th1
 
 
 ############################################### Actual network model
-epsilon = 50 #cross region connectivity
+epsilon = 100 #cross region connectivity
+epsilon_t = 50
 N = 68 #Number of regions
 
 
 def normalize_data(W):
     #takes the W matrix and normalizes the data by row:
+    norm_W = np.zeros(np.shape(W))
     norm = np.sum(W, axis = 1)
     for idx, i in enumerate(norm):
-        W[idx] = W[idx]/i
-    return W
+        norm_W[idx] = W[idx]/i
+    return norm_W
 
 
 
@@ -76,7 +78,7 @@ def ho_thalamus(x):
 
 
 @jit
-def LaNMM(x, t=0):
+def LaNMM(x, I1, I2, t=0):
     #Modified function for iteration in the network
     dx0 = x[5] #P1 population
     dx5 = A_AMPA*a_AMPA*(sigma(C10*x[3]+C1*x[2]+C0*x[1]+I1 + x[10], v0))-2*a_AMPA*x[5]-a_AMPA**2*x[0]
@@ -99,24 +101,37 @@ def LaNMM(x, t=0):
 
 
 
-def full_net(t, x):
+def full_net(t, x, I1, I2, epsilon, epsilon_t):
+    '''
+    Function that integrates the full network; divided in 2 subroutines:
+        -HO Thalamus
+        -Cortex
+    It first separates the variables of the system into the two different systems, it htan calculates the inputs coming 
+    from the other nodes and then calculates the finite differences.
+    Parameters:
+    t: integration time
+    x: state variables of the system
+    I1: input current for the pyramidal cell population P1
+    I2: input current for the pyramidal cell population P2
+    epsilon: global coupling parameter, it scales all of the connections in the network
+    '''
 
     hot = x[:6] #High order thalamus variables
     cortex = x[6:].reshape((N,10)) #cortex variables
 
 
     D = W[-1] #weights to convert from p1 to hot input
-    hot_input = np.dot(D[:-1], cortex[:,0])
+    hot_input = epsilon*np.dot(D[:-1], cortex[:,0])
     hot = np.append(hot, np.transpose([hot_input]), axis= 0) #add the input for high order thalamus as the seventh variable
     d_hot = ho_thalamus(hot) #calculate the increments for HO thalamus
 
 
-    ext_p1 = .5*epsilon*np.dot(W[:68, :68], cortex[:, 0]) 
+    ext_p1 = .5*epsilon*np.dot(W[:68, :68], cortex[:, 0]) + epsilon_t*hot[0]
     ext_p2 = .5*epsilon*np.dot(W[:68, :68], cortex[:,0]) + epsilon*np.dot(W[:68, :68], cortex[:,3])
 
     cortex = np.append(cortex, np.transpose([ext_p1]), axis= 1) #add the input as 11th variable of the system
     cortex =np.append(cortex, np.transpose([ext_p2]), axis = 1) #same but for p2
-    d_cortex = np.apply_along_axis(LaNMM, 1, cortex).flatten()
+    d_cortex = np.apply_along_axis(LaNMM, 1, cortex, I1, I2).flatten()
     #print(np.shape(d_cortex), np.shape(d_hot))
 
 
@@ -130,7 +145,7 @@ def main():
 
     X0 = np.ones((N*10 + 6))*0.1
     t_eval = np.arange(900, 1000, 0.001)
-    system = solve_ivp(full_net, [0, 1000], X0, t_eval=t_eval)
+    system = solve_ivp(full_net, [0, 1000], X0, t_eval=t_eval, args=(I1, I2, epsilon, epsilon_t))
 
     data = system.y.reshape((N*10+6, len(t_eval)))
     
@@ -142,3 +157,5 @@ def main():
 t0 = time()
 main()
 print('integration finished, time used = ', time()- t0)
+
+
