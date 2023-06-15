@@ -83,7 +83,7 @@ def correlation(data):
 
     return
 
-
-
+'''
 plot(data)
 time_series(data)
+'''
