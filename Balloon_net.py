@@ -157,8 +157,33 @@ def Euler_balloon(t, x, *args):
 
         dq[i] = f_in[i]*E(f_in[i])/(E_0*tau_0) - f_out(v[i])*q[i]/(v[i]*tau_0)
 
-    return np.array([ds, df_in, dv, dq]).transpose().flatten()
+    return np.array([ds, df_in, dv, dq]).flatten()
 
+
+
+def euler_balloon(t, x, *args):
+    '''
+
+    Function for integration of the BOLD signal model; takes:
+    t: time of the previous step of integration
+    x. state of the system at the previous step of interation
+    Returns: dx, vector containing the finite differences between the previous and next step of integration
+
+    '''
+    ds, df_in, dv, dq = np.zeros((4,N))
+    s, f_in, v, q = np.reshape(x, (N,4)).transpose()
+    U = args
+    for i in range(N):
+
+        ds[i] = epsilon*U[i][t] -s[i]/tau_s -(f_in[i] -1)/tau_f
+
+        df_in[i] = s[i]
+
+        dv[i] = f_in[i] - f_out(v[i])
+
+        dq[i] = f_in[i]*E(f_in[i])/(E_0*tau_0) - f_out(v[i])*q[i]/(v[i]*tau_0)
+
+    return np.array([ds, df_in, dv, dq]).transpose().flatten()
 
 def Euler_integration(input):
     X0 = np.ones((4,N))*0.01
@@ -187,7 +212,7 @@ def RK4(func, y0, timepoints, args=()):
 def RK4_integration(input):
     X0 = np.ones((4,N))*0.01
     #using points each 2 steps in this way RK4 always finds an integer timestep call
-    timepoints = np.arange(0, 20000, 2)
+    timepoints = np.arange(0, 2*len(input), 2)
     output = RK4(Euler_balloon, X0.flatten(), timepoints, input).reshape((N, 4, len(timepoints)))
     X = np.array([output[:,2,:],output[:,3,:]])
     print(np.shape(X))

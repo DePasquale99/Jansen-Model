@@ -13,3 +13,4 @@ Julia
 dummy
 __pycache__
 cProfile log
+trials.py
