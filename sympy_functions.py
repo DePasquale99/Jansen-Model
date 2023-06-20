@@ -1,5 +1,6 @@
 import numpy as np
 import sympy as smp
+from numba import jit
 
 '''
 Goal of this code is to create the LaNMM model equations in sympy and export them in numpy
@@ -68,10 +69,12 @@ Y = smp.Matrix([y0,y1,y2,y3,y4,y5,y6,y7,y8,y9])
 #Building the jacobian
 Jac = smp.Matrix([Y.diff(x0).T, Y.diff(x1).T, Y.diff(x2).T, Y.diff(x3).T, Y.diff(x4).T, Y.diff(x5).T, Y.diff(x6).T, Y.diff(x7).T, Y.diff(x8).T, Y.diff(x9).T ]).T
 
+@jit
 def get_LaNMM():
     return smp.lambdify([x0,x1,x2,x3,x4,x5,x6,x7,x8,x9], Y)
 
 
+@jit
 def get_Jacobian():
     return smp.lambdify([x0,x1,x2,x3,x4,x5,x6,x7,x8,x9], Jac)
 
@@ -87,7 +90,7 @@ K[8,0] =  a_AMPA*A_AMPA/2*d_sigma.subs([(v, C11*x0+ C5*x3 + C6*x4 + I2 +epsilon/
 K[8,3] =  a_AMPA*A_AMPA*d_sigma.subs([(v, C11*x0+ C5*x3 + C6*x4 + I2 +epsilon/2*x0 + epsilon*x3), (v_0, v0_p2)])
 
 
+@jit
 def get_K():
     return smp.lambdify([x0,x1,x2,x3,x4,x5,x6,x7,x8,x9], K)
 
-    
