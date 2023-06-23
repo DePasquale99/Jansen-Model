@@ -74,21 +74,21 @@ def main():
     lyap = 0
     lyap_idx = 0
     for idx, t in enumerate(timepoints[:-1]):
-        if (idx%10000 == 0): print('Arrived to s = ', idx/10000, ' in time = ', time()- doog)
+        if (idx%100000 == 0): print('Arrived to s = ', idx/10000, ' in time = ', time()- doog)
         system[idx+1] = rk_4(LaNMM, system[idx], timestep)
         if (idx>transient/timestep):
             #should be in a stable state, so we can start calculating lyapunov exp.
             if (idx%10 == 0):
                 #every 10 timesteps, I actually calculate lyap
-                d_msf = np.dot(Jacobian(t,system[idx]) + epsilon*eigenvalue*K(t,system[idx]), msf[lyap_idx])
-                msf[lyap_idx+1] = msf[lyap_idx] + d_msf
+                d_msf = np.dot(Jacobian(t,system[idx+1]) + epsilon*eigenvalue*K(t,system[idx+1]), msf[lyap_idx])
+                msf[lyap_idx+1] = msf[lyap_idx] + d_msf*timestep
                 lyap += np.log(np.linalg.norm(msf[lyap_idx + 1]))
                 msf[lyap_idx+1] = msf[lyap_idx+1]/ np.linalg.norm(msf[lyap_idx+1])
             else:
                 #if not, I just integrate the equations that account for 
-                d_msf = np.dot(Jacobian(t,system[idx]) + epsilon*eigenvalue*K(t,system[idx]), msf[lyap_idx])
+                d_msf = np.dot(Jacobian(t,system[idx+1]) + epsilon*eigenvalue*K(t,system[idx+1]), msf[lyap_idx])
                 msf[lyap_idx+1] = msf[lyap_idx] + d_msf
-                msf[lyap_idx+1] = msf[lyap_idx+1]/ np.linalg.norm(msf[lyap_idx+1])
+                #msf[lyap_idx+1] = msf[lyap_idx+1]/ np.linalg.norm(msf[lyap_idx+1]) 
             lyap_idx += 1
 
     print('Lyapunov exponent is = ', lyap*10/lyap_iter)
@@ -96,3 +96,10 @@ def main():
     return
 
 main()
+
+
+def main2():
+        #using these functions but with  
+
+    return
+

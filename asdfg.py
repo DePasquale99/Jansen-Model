@@ -3,38 +3,7 @@ from sympy_functions import get_Jacobian, get_K, get_LaNMM
 from scipy.linalg import eig
 from time import time
 from numba import jit
-
-#RK4 version that calculates one timepoint each time so I can integrate the two parts of the system separately
-@jit
-def rk_4(func, y0, timestep, args=()):
-    h = timestep
-    y = np.zeros(np.shape(y0))
-    k1 = func(0, y0, *args)
-    k2 = func(0+h/2, y0+k1*h/2, *args)
-    k3 = func(0+ h/2, y0 +k2*h/2, *args)
-    k4 = func(0+ h, y0+k3*h, *args)
-    y= y0 + (h/6)*(k1 +2*k2 +2*k3 +k4)
-    #print(np.shape(y))
-    return y
-
-#Importing the functions from simpy: WRAPPER NEEDED TO WORK WITH INTEGRATOR
-
-funct = get_LaNMM()
-f_Jac =get_Jacobian()
-f_K =get_K()
-@jit
-def LaNMM(t, x):
-    y = funct(x[0],x[1],x[2],x[3],x[4],x[5],x[6],x[7],x[8],x[9])
-    #print('LaNMM output size = ', np.shape(y))
-    return y[:,0]
-
-@jit
-def Jacobian(t, x):
-    return f_Jac(x[0],x[1],x[2],x[3],x[4],x[5],x[6],x[7],x[8],x[9])[:,0]
-
-@jit
-def K(t,x):
-    return f_K(x[0],x[1],x[2],x[3],x[4],x[5],x[6],x[7],x[8],x[9])[:,0]
+import matplotlib.pyplot as plt
 
 #Importing the connectivity matrix and calculating it's eigenvalues
 
@@ -56,43 +25,129 @@ eigenvalue = values[0] #selecting the eigenvalue for MSF
 epsilon = 50 #global connectivity parameter
 
 t_end = 1000 #simulation duration
-timestep = 0.0001 #integration timestep
-tau = 0.001 #Lyapunov exponent timestep
+timestep = 0.001 #integration timestep
+tau = 0.01 #Lyapunov exponent timestep
 transient = 500
 iterations = int(t_end/timestep)
 lyap_iter = int((t_end-transient)/timestep)
+
+lyap_period = int(tau/timestep)
 #ÐO I NEED TO CODE A TRANSIENT TIME FOR THE SYSTEM TO STABILYZE BEFORE STARTING WITH MSF?
 
+
+#Declaring gloablly the storage for the data so that the normalization can be done in a different function from the integration one
+
+timepoints = np.arange(0, t_end, timestep)
+system = np.zeros((iterations, 10)) #starting point = 0
+lyap_vector = np.zeros((iterations, 10)) #setting the starting point = 1/10 (normalized unifom vector?)
+lyap_vector[0] = np.ones((1,10))/10
+
+
+
+#RK4 version that calculates one timepoint each time so I can integrate the two parts of the system separately
+@jit
+def rk_4(func, y0, timestep, args=()):
+    h = timestep
+    y = np.copy(y0)
+    k1 = func(0, y0, *args)
+    k2 = func(0+h/2, y0+k1*h/2, *args)
+    k3 = func(0+ h/2, y0 +k2*h/2, *args)
+    k4 = func(0+ h, y0+k3*h, *args)
+    y += (h/6)*(k1 +2*k2 +2*k3 +k4)
+    #print(np.shape(y))
+    return y
+
+#Importing the functions from simpy: WRAPPER NEEDED TO WORK WITH INTEGRATOR
+
+f_LaNMM = get_LaNMM()
+f_Jac =get_Jacobian()
+f_K =get_K()
+
+def Jacobian(t, x):
+    return f_Jac(x[0],x[1],x[2],x[3],x[4],x[5],x[6],x[7],x[8],x[9])
+
+def K(t,x):
+    return f_K(x[0],x[1],x[2],x[3],x[4],x[5],x[6],x[7],x[8],x[9])
+
+@jit
+def full_system(t, x):
+    #This function calculates both the self coupled system and it's deviation
+    y, z = x[:10], x[10:]
+    dy = f_LaNMM(y[0],y[1],y[2],y[3],y[4],y[5],y[6],y[7],y[8],y[9])[:,0]
+    J = Jacobian(t,y) + epsilon*eigenvalue*K(t,y)
+    dz = np.dot(J, z.T)
+    return np.append(dy, dz)
 
 doog = time()
 
 def main():
-    timepoints = np.arange(0, t_end, timestep)
-    system = np.zeros((iterations, 10)) #starting point = 0
-    msf = np.zeros((lyap_iter, 10)) #setting the starting point = 1/10 (normalized unifom vector?)
-    msf[0] = np.ones((1,10))/10
     lyap = 0
-    lyap_idx = 0
+    n_lyap = 0
+    lyap_values = np.zeros((iterations))
+
     for idx, t in enumerate(timepoints[:-1]):
-        if (idx%10000 == 0): print('Arrived to s = ', idx/10000, ' in time = ', time()- doog)
-        system[idx+1] = rk_4(LaNMM, system[idx], timestep)
-        if (idx>transient/timestep):
-            #should be in a stable state, so we can start calculating lyapunov exp.
-            if (idx%10 == 0):
-                #every 10 timesteps, I actually calculate lyap
-                d_msf = np.dot(Jacobian(t,system[idx]) + epsilon*eigenvalue*K(t,system[idx]), msf[lyap_idx])
-                msf[lyap_idx+1] = msf[lyap_idx] + d_msf
-                lyap += np.log(np.linalg.norm(msf[lyap_idx + 1]))
-                msf[lyap_idx+1] = msf[lyap_idx+1]/ np.linalg.norm(msf[lyap_idx+1])
-            else:
-                #if not, I just integrate the equations that account for 
-                d_msf = np.dot(Jacobian(t,system[idx]) + epsilon*eigenvalue*K(t,system[idx]), msf[lyap_idx])
-                msf[lyap_idx+1] = msf[lyap_idx] + d_msf
-                msf[lyap_idx+1] = msf[lyap_idx+1]/ np.linalg.norm(msf[lyap_idx+1])
-            lyap_idx += 1
+        if (idx%100000 == 0): print('Arrived to s = ', idx*timestep, ' in time = ', time()- doog)
+        y0 = np.append(system[idx], lyap_vector[idx])
+        result  = rk_4(full_system, y0, timestep)
+        system[idx+1], lyap_vector[idx+1] = result[:10], result[10:]
+        if (idx>transient/timestep) & (idx%10 == 0):
+            lyap += np.log(np.linalg.norm(lyap_vector[idx + 1]))
+            n_lyap += 1
+            lyap_values[n_lyap-1] = lyap/n_lyap
+        lyap_vector[idx+1] = lyap_vector[idx+1]/ np.linalg.norm(lyap_vector[idx+1]) #NORMALIZATION each cycle
+
 
     print('Lyapunov exponent is = ', lyap*10/lyap_iter)
-    
+    print('Total time used = ', time() - doog)
+
+    plt.plot(range(n_lyap), lyap_values[:n_lyap])
+    plt.title('Lyapunov exponent convergence at tau = ' + str( tau) + ' and timestep = '+ str(timestep))
+    plt.show()
     return
 
+
+def main2():
+
+    lyap = 0
+    n_lyap = 0
+    
+    for idx in range(iterations-lyap_iter):
+        #if (idx%100000 == 0): print('Arrived to s = ', idx*timestep, ' in time = ', time()- doog)
+        y0 = np.append(system[idx], lyap_vector[idx])
+        result  = rk_4(full_system, y0, timestep)
+        system[idx+1], lyap_vector[idx+1] = result[:10], result[10:]
+        if(idx%lyap_period == 0):
+            lyap_vector[idx+1] = lyap_vector[idx+1]/ np.linalg.norm(lyap_vector[idx+1]) #NORMALIZATION 
+
+    print('Transient time finished, starting to calculate Lyapunov exponents')    
+
+    lyap_values = np.zeros((iterations))
+
+    for idx in range(lyap_iter, iterations-1, 1):
+        #if (idx%100000 == 0): print('Arrived to s = ', idx*timestep, ' in time = ', time()- doog)
+        y0 = np.append(system[idx], lyap_vector[idx])
+        result  = rk_4(full_system, y0, timestep)
+        system[idx+1], lyap_vector[idx+1] = result[:10], result[10:]
+        if(idx%lyap_period == 0):
+            n_lyap +=1
+            lyap += np.log(np.linalg.norm(lyap_vector[idx + 1]))
+            lyap_values[n_lyap-1] = lyap/n_lyap
+            lyap_vector[idx+1] = lyap_vector[idx+1]/ np.linalg.norm(lyap_vector[idx+1])#NORMALIZATION 
+
+    print('Lyapunov exponent is = ', lyap/n_lyap)
+    print('Total time used = ', time() - doog)
+
+    plt.plot(range(n_lyap), lyap_values[:n_lyap])
+    plt.title('Lyapunov exponent convergence at tau = ' + str( tau) + ' and timestep = '+ str(timestep))
+    plt.show()
+
+    
 main()
+
+
+
+
+
+
+
+
