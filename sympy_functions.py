@@ -19,7 +19,7 @@ a_AMPA, a_GABAs, a_GABAf = 100, 50, 220 #excitatory synaptic time rate (s^-1)
 C0, C1, C2, C3, C4, C5, C6, C7, C8, C9, C10, C11, C12 = 108, 33.7, 1, 135, 33.75, 70, 550, 1, 200, 100, 80, 200, 30
 
 #Input parameter of the model, sets the external input as an average firing rate
-p1, p2 = 200, 150 #p1 is noisy in the original model, produced by N(200,30)
+p1, p2 = 200, 90 #p1 is noisy in the original model, produced by N(200,30)
 #In order to transform from presynaptic firing rate to PSP (fixed point of second order eqt for p1,p2)
 I1, I2 = (A_AMPA/a_AMPA)*p1, (A_AMPA/a_AMPA)*p2
 epsilon = 50
@@ -29,7 +29,7 @@ epsilon = 50
 v, v_0 = smp.symbols('v v_0')
 sigma = smp.symbols('\sigma', cls = smp.Function)
 sigma = sigma(v, v_0)
-sigma = 2*e0/(1+smp.exp(r*(v-v_0)))
+sigma = 2*e0/(1+smp.exp(r*(v_0-v)))
 
 
 #Defining LaNMM equations
@@ -44,7 +44,8 @@ y2 = x7
 y3 = x8
 y4 = x9
 
-sigma_P1 = sigma.subs([(v, C10*x3+C1*x2+C0*x1+I1 + epsilon/2*x0), (v_0, v0)])
+sigma_P1 = sigma.subs([(v, C10*x3+C1*x2+C0*x1+I1 + epsilon*0.5*x0), (v_0, v0)]) #SELF COUPLED VERSION
+#sigma_P1 = sigma.subs([(v, C10*x3+C1*x2+C0*x1+I1 ), (v_0, v0)]) #UNCOUPLED
 y5 = A_AMPA*a_AMPA*(sigma_P1)-2*a_AMPA*x5-a_AMPA**2*x0
 
 sigma_rPN = sigma.subs([(v, C3*x0), (v_0, v0)])
@@ -55,7 +56,8 @@ sigma_IN = sigma.subs([(v, C4*x0), (v_0, v0)])
 y7 = A_GABAs*a_GABAs*(sigma_IN)-2*a_GABAs*x7-a_GABAs**2*x2
 
 
-sigma_P2 = sigma.subs([(v, C11*x0+ C5*x3 + C6*x4 + I2 +epsilon/2*x0 + epsilon*x3), (v_0, v0_p2)])
+sigma_P2 = sigma.subs([(v, C11*x0+ C5*x3 + C6*x4 + I2 +epsilon*0.5*x0 + epsilon*x3), (v_0, v0_p2)]) #SELF COUPLED VERSION
+#sigma_P2 = sigma.subs([(v, C11*x0+ C5*x3 + C6*x4 + I2), (v_0, v0_p2)]) #STANDALONE VERSION
 y8 = A_AMPA*a_AMPA*(sigma_P2)-2*a_AMPA*x8-a_AMPA**2*x3
 
 
@@ -81,12 +83,14 @@ def get_Jacobian():
 K = smp.zeros(10,10)
 d_sigma = sigma.diff(v) 
 
-K[5,0] = a_AMPA*A_AMPA/2*d_sigma.subs([(v, C10*x3+C1*x2+C0*x1+I1 + epsilon/2*x0), (v_0, v0)])
 
-K[8,0] =  a_AMPA*A_AMPA/2*d_sigma.subs([(v, C11*x0+ C5*x3 + C6*x4 + I2 +epsilon/2*x0 + epsilon*x3), (v_0, v0_p2)])
+K[5,0] = (1/2)*a_AMPA*A_AMPA/2*d_sigma.subs([(v, C10*x3+C1*x2+C0*x1+I1 + epsilon/2*x0), (v_0, v0)])
+
+
+K[8,0] =  (1/2)*a_AMPA*A_AMPA/2*d_sigma.subs([(v, C11*x0+ C5*x3 + C6*x4 + I2 +epsilon/2*x0 + epsilon*x3), (v_0, v0_p2)])
+
 
 K[8,3] =  a_AMPA*A_AMPA*d_sigma.subs([(v, C11*x0+ C5*x3 + C6*x4 + I2 +epsilon/2*x0 + epsilon*x3), (v_0, v0_p2)])
-
 
 def get_K():
     return smp.lambdify([x0,x1,x2,x3,x4,x5,x6,x7,x8,x9], K)

@@ -25,9 +25,9 @@ eigenvalue = values[0] #selecting the eigenvalue for MSF
 epsilon = 50 #global connectivity parameter
 
 t_end = 1000 #simulation duration
-timestep = 0.001 #integration timestep
+timestep = 0.001    #integration timestep
 tau = 0.01 #Lyapunov exponent timestep
-transient = 500
+transient = 800
 iterations = int(t_end/timestep)
 lyap_iter = int((t_end-transient)/timestep)
 
@@ -63,6 +63,10 @@ f_LaNMM = get_LaNMM()
 f_Jac =get_Jacobian()
 f_K =get_K()
 
+def LaNMM(t, x):
+    y =f_LaNMM(x[0],x[1],x[2],x[3],x[4],x[5],x[6],x[7],x[8],x[9])[:,0]
+    return y
+
 def Jacobian(t, x):
     return f_Jac(x[0],x[1],x[2],x[3],x[4],x[5],x[6],x[7],x[8],x[9])
 
@@ -75,35 +79,11 @@ def full_system(t, x):
     y, z = x[:10], x[10:]
     dy = f_LaNMM(y[0],y[1],y[2],y[3],y[4],y[5],y[6],y[7],y[8],y[9])[:,0]
     J = Jacobian(t,y) + epsilon*eigenvalue*K(t,y)
-    dz = np.dot(J, z.T)
+    dz = np.dot(J, z)
     return np.append(dy, dz)
 
 doog = time()
 
-def main():
-    lyap = 0
-    n_lyap = 0
-    lyap_values = np.zeros((iterations))
-
-    for idx, t in enumerate(timepoints[:-1]):
-        if (idx%100000 == 0): print('Arrived to s = ', idx*timestep, ' in time = ', time()- doog)
-        y0 = np.append(system[idx], lyap_vector[idx])
-        result  = rk_4(full_system, y0, timestep)
-        system[idx+1], lyap_vector[idx+1] = result[:10], result[10:]
-        if (idx>transient/timestep) & (idx%10 == 0):
-            lyap += np.log(np.linalg.norm(lyap_vector[idx + 1]))
-            n_lyap += 1
-            lyap_values[n_lyap-1] = lyap/n_lyap
-        lyap_vector[idx+1] = lyap_vector[idx+1]/ np.linalg.norm(lyap_vector[idx+1]) #NORMALIZATION each cycle
-
-
-    print('Lyapunov exponent is = ', lyap*10/lyap_iter)
-    print('Total time used = ', time() - doog)
-
-    plt.plot(range(n_lyap), lyap_values[:n_lyap])
-    plt.title('Lyapunov exponent convergence at tau = ' + str( tau) + ' and timestep = '+ str(timestep))
-    plt.show()
-    return
 
 
 def main2():
@@ -122,8 +102,8 @@ def main2():
     print('Transient time finished, starting to calculate Lyapunov exponents')    
 
     lyap_values = np.zeros((iterations))
-
-    for idx in range(lyap_iter, iterations-1, 1):
+                    #Tryina fix the different timesteps giving different convergences
+    for idx in range(iterations-lyap_iter, iterations-1, 1):
         #if (idx%100000 == 0): print('Arrived to s = ', idx*timestep, ' in time = ', time()- doog)
         y0 = np.append(system[idx], lyap_vector[idx])
         result  = rk_4(full_system, y0, timestep)
@@ -131,20 +111,52 @@ def main2():
         if(idx%lyap_period == 0):
             n_lyap +=1
             lyap += np.log(np.linalg.norm(lyap_vector[idx + 1]))
-            lyap_values[n_lyap-1] = lyap/n_lyap
+            lyap_values[n_lyap-1] = lyap/(n_lyap*tau)
             lyap_vector[idx+1] = lyap_vector[idx+1]/ np.linalg.norm(lyap_vector[idx+1])#NORMALIZATION 
 
-    print('Lyapunov exponent is = ', lyap/n_lyap)
+    print((n_lyap*tau), ' = ', (t_end -transient))
+    print('Lyapunov exponent is = ', lyap/(t_end -transient), ' = ', lyap_values[n_lyap-1])
     print('Total time used = ', time() - doog)
 
     plt.plot(range(n_lyap), lyap_values[:n_lyap])
     plt.title('Lyapunov exponent convergence at tau = ' + str( tau) + ' and timestep = '+ str(timestep))
     plt.show()
 
+
+    plt.plot(np.arange(90, 100, 0.001), system[-10000:,3])
+    plt.show()
+
+from scipy.integrate import solve_ivp
+
+def simulation():
+    #checks if the self coupled model is working
     
-main()
+    iterations = 100000
+    timestep = .001
+    results = np.zeros((iterations,10))
+    results[0] = np.random.uniform(size=(10))
+    
+    for i in range(iterations-1):
+        results[i+1] = rk_4(LaNMM, results[i], timestep)
+
+    plt.plot(range(int(iterations/10)), results[-int(iterations/10):,3])
+    plt.show()
+
+    '''
+    y0 = np.random.uniform(size=(10))
+
+    results = solve_ivp(LaNMM, (0, 100), y0, t_eval=np.arange(90, 100, 0.001)).y
+    results = np.reshape(results, (10, len(np.arange(90, 100, 0.001))))
 
 
+    plt.plot(np.arange(90, 100, 0.001), results[0])
+    plt.show()'''
+
+    return
+
+    
+main2()
+#simulation()
 
 
 
