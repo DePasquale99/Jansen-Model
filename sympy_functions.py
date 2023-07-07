@@ -55,7 +55,6 @@ y6 = A_AMPA*a_AMPA*(sigma_rPN)-2*a_AMPA*x6-a_AMPA**2*x1
 sigma_IN = sigma.subs([(v, C4*x0), (v_0, v0)])
 y7 = A_GABAs*a_GABAs*(sigma_IN)-2*a_GABAs*x7-a_GABAs**2*x2
 
-
 sigma_P2 = sigma.subs([(v, C11*x0+ C5*x3 + C6*x4 + I2 +epsilon*0.5*x0 + epsilon*x3), (v_0, v0_p2)]) #SELF COUPLED VERSION
 #sigma_P2 = sigma.subs([(v, C11*x0+ C5*x3 + C6*x4 + I2), (v_0, v0_p2)]) #STANDALONE VERSION
 y8 = A_AMPA*a_AMPA*(sigma_P2)-2*a_AMPA*x8-a_AMPA**2*x3
@@ -84,10 +83,10 @@ K = smp.zeros(10,10)
 d_sigma = sigma.diff(v) 
 
 
-K[5,0] = (1/2)*a_AMPA*A_AMPA/2*d_sigma.subs([(v, C10*x3+C1*x2+C0*x1+I1 + epsilon/2*x0), (v_0, v0)])
+K[5,0] = (1/2)*a_AMPA*A_AMPA*d_sigma.subs([(v, C10*x3+C1*x2+C0*x1+I1 + epsilon/2*x0), (v_0, v0)])
 
 
-K[8,0] =  (1/2)*a_AMPA*A_AMPA/2*d_sigma.subs([(v, C11*x0+ C5*x3 + C6*x4 + I2 +epsilon/2*x0 + epsilon*x3), (v_0, v0_p2)])
+K[8,0] =  (1/2)*a_AMPA*A_AMPA*d_sigma.subs([(v, C11*x0+ C5*x3 + C6*x4 + I2 +epsilon/2*x0 + epsilon*x3), (v_0, v0_p2)])
 
 
 K[8,3] =  a_AMPA*A_AMPA*d_sigma.subs([(v, C11*x0+ C5*x3 + C6*x4 + I2 +epsilon/2*x0 + epsilon*x3), (v_0, v0_p2)])

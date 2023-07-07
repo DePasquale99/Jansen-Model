@@ -76,7 +76,7 @@ W = normalize_data(W)
 
 #assert np.isclose(np.sum(W, axis=1), np.ones((N)))
 
-#initial conditions: (0.2, 0) for every neural pop
+#initial conditions: (0.2, 0) for every neural pop 
 X0 = np.append(np.ones((N, 5))*0.2,np.zeros((N, 5)), axis = 1 )
 dx = np.zeros((N, 10))
 
@@ -177,7 +177,7 @@ def balloon(x):
     '''
     s, f_in, v, q, u = x
 
-    ds = epsilon*u -s/tau_s -(f_in -1)/tau_f
+    ds = eff*u -s/tau_s -(f_in -1)/tau_f
 
     df_in = s
 

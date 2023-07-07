@@ -23,7 +23,7 @@ a_AMPA, a_GABAs, a_GABAf = 100, 50, 220 #excitatory synaptic time rate (s^-1)
 C0, C1, C2, C3, C4, C5, C6, C7, C8, C9, C10, C11, C12 = 108, 33.7, 1, 135, 33.75, 70, 550, 1, 200, 100, 80, 200, 30
 
 #Input parameter of the model, sets the external input as an average firing rate
-p1, p2 = 200, 150 #p1 is noisy in the original model, produced by N(200,30)
+p1, p2 = 200, 90 #p1 is noisy in the original model, produced by N(200,30)
 #In order to transform from presynaptic firing rate to PSP (fixed point of second order eqt for p1,p2)
 I1, I2 = (A_AMPA/a_AMPA)*p1, (A_AMPA/a_AMPA)*p2
 
@@ -53,7 +53,7 @@ def LaNMM(t , x , epsilon):
 def main():
     t_eval = np.arange(900, 1000, 0.001)
 
-    result = solve_ivp(LaNMM, (0, 1000) ,  [.1,0,0,.01,0,0,0,0,0,0], t_eval=t_eval).y
+    result = solve_ivp(LaNMM, (0, 1000) ,  [.1,0,0,.01,0,0,0,0,0,0], t_eval=t_eval, args = (epsilon,)).y
 
     print(np.shape(result))
 
@@ -83,17 +83,17 @@ def simulation(epsilon):
 
     t_eval = np.arange(900, 1000, 0.001)
 
-    result = solve_ivp(LaNMM, (0, 1000) ,  [.1,0,0,.01,0,0,0,0,0,0], t_eval=t_eval).y
+    result = solve_ivp(LaNMM, (0, 1000) ,  [.1,0,0,.01,0,0,0,0,0,0], t_eval=t_eval, args = (epsilon,)).y
 
     print(np.shape(result))
 
-    plt.scatter(t_eval, result[:,0], label = 'P1 potential')
+    plt.scatter(t_eval, result[0,:], label = 'P1 potential')
 
     #plt.scatter(t, result[:,1], label = 'SS potential')
 
     #plt.scatter(t, result[:,2], label = 'SST potential')
 
-    plt.scatter(t_eval, result[:,3], label = 'P2 potential')
+    plt.scatter(t_eval, result[3,:], label = 'P2 potential')
 
     #plt.scatter(t, result[:,4], label = 'PV potential')
     #plt.title('LaNMM model with p1 = ', p1,', p2 = ', p2)
@@ -101,4 +101,5 @@ def simulation(epsilon):
     plt.show()
     return 
 
+simulation(50)
 
